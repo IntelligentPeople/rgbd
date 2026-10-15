@@ -7,7 +7,6 @@ export default function App({ provider }: { provider: DemoProvider }) {
   const demo = useDemo(provider);
   const [mode, setMode] = useState<'samples' | 'upload'>('samples');
   const [view, setView] = useState<ViewTransform>({ zoom: 1, x: 0, y: 0 });
-  const sample = demo.samples.find((item) => item.id === demo.selected);
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
     setMode(next);
@@ -19,56 +18,50 @@ export default function App({ provider }: { provider: DemoProvider }) {
     <>
       <header className="topbar">
         <a href="#" className="brand">
-          <span className="brand-mark">◈</span>
+          <span className="brand-mark" aria-hidden="true">
+            ▧
+          </span>
           <strong>
-            RGB-D<span>实例分割实验台</span>
+            RGB-D<span>小目标实例分割</span>
           </strong>
         </a>
         <div className="header-meta">
-          <span className="status-dot" />
-          本地演示 <span className="mode-badge">MOCK</span>
+          <details className="mode-info">
+            <summary>模拟演示</summary>
+            <p>输入和真实标注来自课程验证集。预测由标注扰动生成，不代表模型性能；耗时为模拟值。</p>
+          </details>
         </div>
       </header>
       <main>
-        <section className="intro">
-          <div>
-            <span className="eyebrow">SMALL OBJECT · INSTANCE SEGMENTATION</span>
-            <h1>
-              从像素到实例<span>，看清每一个小目标。</span>
-            </h1>
-            <p>结合 RGB 与深度信息，观察真实标注与基线、改进模型的分割差异。</p>
-          </div>
-          <div className="intro-index">
-            RGB<span>＋</span>D<small>1024 × 1024</small>
-          </div>
-        </section>
-        <div className="mock-notice">
-          <span>模拟模式</span>
-          <p>
-            输入与 GT 来自真实课程数据；两组预测由标注扰动生成，仅用于交互演示，不代表模型性能。
-          </p>
-        </div>
         <section className="input-section">
           <div className="section-heading">
-            <div>
-              <span className="eyebrow">01 / INPUT</span>
-              <h2>选择一个场景</h2>
-            </div>
-            <div className="tabs" role="group" aria-label="输入方式">
-              <button
-                aria-pressed={mode === 'samples'}
-                className={mode === 'samples' ? 'active' : ''}
-                onClick={() => changeMode('samples')}
-              >
-                内置样例
-              </button>
-              <button
-                aria-pressed={mode === 'upload'}
-                className={mode === 'upload' ? 'active' : ''}
-                onClick={() => changeMode('upload')}
-              >
-                上传 RGB-D
-              </button>
+            <h1>输入场景</h1>
+            <div className="input-actions">
+              <div className="tabs" role="group" aria-label="输入方式">
+                <button
+                  aria-pressed={mode === 'samples'}
+                  className={mode === 'samples' ? 'active' : ''}
+                  onClick={() => changeMode('samples')}
+                >
+                  内置样例
+                </button>
+                <button
+                  aria-pressed={mode === 'upload'}
+                  className={mode === 'upload' ? 'active' : ''}
+                  onClick={() => changeMode('upload')}
+                >
+                  上传 RGB-D
+                </button>
+              </div>
+              {mode === 'samples' && (
+                <button
+                  className="primary"
+                  disabled={!demo.input || demo.loading || demo.running}
+                  onClick={() => void demo.run()}
+                >
+                  {demo.running ? '正在运行…' : demo.comparison ? '重新对比' : '运行对比'}
+                </button>
+              )}
             </div>
           </div>
           {mode === 'samples' ? (
@@ -79,7 +72,7 @@ export default function App({ provider }: { provider: DemoProvider }) {
                 </div>
               )}
               <div className="sample-grid">
-                {demo.samples.map((item, i) => (
+                {demo.samples.map((item) => (
                   <button
                     key={item.id}
                     className={`sample ${item.id === demo.selected ? 'selected' : ''}`}
@@ -92,7 +85,6 @@ export default function App({ provider }: { provider: DemoProvider }) {
                   >
                     <div className="thumbnail">
                       <img src={item.rgbUrl} alt={item.title} />
-                      <span>0{i + 1}</span>
                       {item.id === demo.selected && <b>✓</b>}
                     </div>
                     <strong>{item.title}</strong>
@@ -104,13 +96,13 @@ export default function App({ provider }: { provider: DemoProvider }) {
               </div>
               {demo.loading && (
                 <p role="status" className="notice">
-                  正在解码 RGB-D 与真实实例掩码…
+                  正在加载样例…
                 </p>
               )}
               {demo.input && (
                 <details className="input-details">
                   <summary>
-                    查看输入 RGB / 深度{' '}
+                    RGB 与深度预览{' '}
                     <span>
                       {demo.input.width}×{demo.input.height} · 样例 {demo.input.id}
                     </span>
@@ -123,37 +115,21 @@ export default function App({ provider }: { provider: DemoProvider }) {
                     <figure>
                       <img src={demo.input.depthPreview?.src} alt="深度伪彩色预览" />
                       <figcaption>
-                        深度伪彩色 · 近 <i className="depth-scale" /> 远
+                        深度 · 近 <i className="depth-scale" /> 远
                       </figcaption>
                     </figure>
                     <div className="input-description">
-                      <strong>{sample?.title}</strong>
-                      <p>{sample?.description}</p>
+                      <strong>输入信息</strong>
                       <p>
                         原始深度 × {demo.input.depthScaleM} = 米<br />
                         无效值：{demo.input.depthInvalidCode}
                         <br />
                         深度为相机 Z 轴距离，色彩按每张图有效范围归一化。
                       </p>
-                      <p>GT 仅用于对照，不进入推理。</p>
                     </div>
                   </div>
                 </details>
               )}
-              <div className="run-row">
-                <div>
-                  <span className="pair-dot" />
-                  基线模型 <span className="pair-line">→</span> 改进模型
-                  <small>固定模型对 · 模拟预测</small>
-                </div>
-                <button
-                  className="primary"
-                  disabled={!demo.input || demo.loading || demo.running}
-                  onClick={() => void demo.run()}
-                >
-                  {demo.running ? '◌ 正在运行…' : demo.comparison ? '↻ 重新运行对比' : '▶ 运行对比'}
-                </button>
-              </div>
             </>
           ) : (
             <UploadPanel />
@@ -177,47 +153,19 @@ export default function App({ provider }: { provider: DemoProvider }) {
             setView={setView}
           />
         )}
-        <section className="metrics-section">
-          <div>
-            <span className="eyebrow">03 / BENCHMARK</span>
-            <h2>完整实验指标</h2>
-            <p>
-              与当前图片及展示阈值独立。
-              <br />
-              真实评测结果核验后填入。
-            </p>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>模型</th>
-                  <th>Mask APₛ ↑</th>
-                  <th>Mask AP ↑</th>
-                  <th>模型大小</th>
-                  <th>推理速度</th>
-                </tr>
-              </thead>
-              <tbody>
-                {['基线模型', '改进模型'].map((name) => (
-                  <tr key={name}>
-                    <th>{name}</th>
-                    {[0, 1, 2, 3].map((i) => (
-                      <td key={i}>待提供</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <small>
-              主指标：Mask APₛ@[0.50:0.95]，分数范围 0–1。效率指标需注明硬件与计时条件。
-            </small>
-          </div>
-        </section>
+        <details className="metrics-section">
+          <summary>
+            实验指标<span>待接入真实评测</span>
+          </summary>
+          <p>
+            完整测试集的 Mask APₛ、Mask
+            AP、模型大小与推理速度将在评测后提供，与当前图片和展示阈值无关。
+          </p>
+        </details>
       </main>
       <footer className="page-footer">
-        <span>RGB-D / 小目标实例分割</span>
-        <span>课程数据 · 验证集样例 · Mock 演示 v0.1</span>
+        <span>RGB-D 实例分割</span>
+        <span>课程演示</span>
       </footer>
     </>
   );

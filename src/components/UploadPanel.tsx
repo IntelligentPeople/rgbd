@@ -45,7 +45,9 @@ export function UploadPanel() {
         {(['rgb', 'depth'] as const).map((role) => (
           <label className="file-field" key={role}>
             <strong>{role === 'rgb' ? 'RGB 彩色图' : '原始深度图'}</strong>
-            <span>{role === 'rgb' ? '8 位 · 三通道 PNG' : '16 位 · 单通道 PNG'} · 1024×1024</span>
+            <span>
+              {role === 'rgb' ? '8 位三通道 PNG' : '16 位单通道 PNG'}，1024×1024，最大 30 MB
+            </span>
             <input
               aria-label={role === 'rgb' ? '上传 RGB 图' : '上传深度图'}
               type="file"
@@ -53,7 +55,7 @@ export function UploadPanel() {
               onChange={(e) => void choose(role, e.target.files?.[0])}
             />
             {busy[role] && <small>正在检查图像…</small>}
-            {files[role] && <small className="success">✓ {files[role]!.name} · 校验通过</small>}
+            {files[role] && <small className="success">✓ 校验通过</small>}
             {errors[role] && (
               <small role="alert" className="error-text">
                 {errors[role]}
@@ -64,8 +66,10 @@ export function UploadPanel() {
       </div>
       {preview && <img className="upload-preview" src={preview} alt="上传的 RGB 预览" />}
       <p className="notice">
-        {files.rgb && files.depth ? '输入已就绪。' : ''}当前为 Mock
-        模式，暂未接入上传推理。文件仅在浏览器本地校验，不会发送到服务器。
+        {files.rgb && files.depth
+          ? '两张图已通过校验。'
+          : '请选择同一视角、已配准的 RGB 与深度图。'}
+        上传推理尚未接入。
       </p>
     </div>
   );

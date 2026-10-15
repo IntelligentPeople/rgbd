@@ -39,7 +39,7 @@ export function ComparisonViewer({
   if (input.gt)
     panels.push({
       title: '真实标注',
-      subtitle: `GT · ${input.gt.length} 个实例`,
+      subtitle: 'GT',
       instances: input.gt,
       kind: 'gt',
     });
@@ -59,10 +59,7 @@ export function ComparisonViewer({
   return (
     <section className="comparison-section">
       <div className="section-heading">
-        <div>
-          <span className="eyebrow">02 / COMPARE</span>
-          <h2>在同一处，看见差异</h2>
-        </div>
+        <h2>分割对比</h2>
         <button
           className="secondary"
           disabled={!comparison || exporting || running}
@@ -78,7 +75,7 @@ export function ComparisonViewer({
             }
           }}
         >
-          {exporting ? '正在导出…' : '↓ 导出对比图'}
+          {exporting ? '正在导出…' : '导出图片'}
         </button>
       </div>
       <div className="viewer-toolbar">
@@ -137,7 +134,7 @@ export function ComparisonViewer({
             <header>
               <div>
                 <h3>{panel.title}</h3>
-                <span>{panel.subtitle}</span>
+                <span title={panel.subtitle}>{panel.subtitle.split(' · ')[0]}</span>
               </div>
               <span className="count">
                 {panel.pending || panel.error
@@ -156,7 +153,7 @@ export function ComparisonViewer({
               />
               {panel.pending && (
                 <div className="viewport-placeholder">
-                  <span>{running ? '正在读取模拟预测…' : '点击「运行对比」查看预测'}</span>
+                  <span>{running ? '正在运行…' : '等待对比'}</span>
                 </div>
               )}
               {panel.error && (
@@ -165,25 +162,28 @@ export function ComparisonViewer({
                 </div>
               )}
             </div>
-            <footer>
-              {panel.kind === 'gt'
-                ? '真实标注 · 不参与模型推理'
-                : (() => {
-                    const model = comparison?.models.find((m) => m.role === panel.kind);
-                    return model?.status === 'success'
-                      ? `${model.source === 'mock' ? '模拟耗时' : '推理耗时'} ${(model.elapsedMs / 1000).toFixed(2)} s${visibleInstances(model.instances, threshold).length === 0 ? ' · 当前阈值下无实例' : ''}`
-                      : panel.error
-                        ? '该模型未返回结果，可重新运行对比'
-                        : '预测将在运行后显示';
-                  })()}
-            </footer>
+            {panel.kind !== 'gt' && comparison && (
+              <footer>
+                {(() => {
+                  const model = comparison?.models.find((m) => m.role === panel.kind);
+                  return model?.status === 'success'
+                    ? `${model.source === 'mock' ? '模拟耗时' : '推理耗时'} ${(model.elapsedMs / 1000).toFixed(2)} s${visibleInstances(model.instances, threshold).length === 0 ? ' · 当前阈值下无实例' : ''}`
+                    : panel.error
+                      ? '请重新运行对比'
+                      : '';
+                })()}
+              </footer>
+            )}
           </article>
         ))}
       </div>
-      <div className="viewer-caption">
-        <span>↔ 三列同步视图 · 滚轮缩放 / 拖动平移</span>
-        <span>颜色仅区分实例，不表示跨模型匹配</span>
-      </div>
+      <details className="viewer-help">
+        <summary>操作说明</summary>
+        <p>
+          滚轮缩放，拖动平移，三列同步。键盘加减键缩放，0
+          复位。置信度仅筛选预测；颜色用于区分实例，不表示跨模型匹配。
+        </p>
+      </details>
       {exportError && (
         <p role="alert" className="error-text">
           {exportError}
