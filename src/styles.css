@@ -162,7 +162,6 @@ h2 {
 .input-details {
   margin-top: 8px;
   padding: 9px 0;
-  border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
 .input-details summary {
