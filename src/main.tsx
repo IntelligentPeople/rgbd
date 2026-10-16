@@ -1,16 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { createAdapter } from './providers';
+import { createBackend } from './backend';
 import { StaticSampleRepository } from './providers/samples';
 import './styles.css';
 const root = createRoot(document.getElementById('root')!);
 try {
-  const adapter = createAdapter();
+  const backend = createBackend();
   const repository = new StaticSampleRepository();
   root.render(
     <StrictMode>
-      <App repository={repository} adapter={adapter} />
+      <App repository={repository} backend={backend} />
     </StrictMode>,
   );
 } catch (error) {

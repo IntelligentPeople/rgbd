@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encode } from 'fast-png';
 import { decodeDepth, colorizeDepth } from './depth';
-import { fingerprint } from './fingerprint';
+import { fingerprint } from '../backend/fingerprint';
 test('16-bit decoding preserves depths above 255 and preview leaves raw values untouched', () => {
   const data = new Uint16Array(1024 * 1024);
   data[0] = 257;

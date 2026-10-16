@@ -22,7 +22,14 @@ export class StaticSampleRepository implements SampleRepository {
       readBlob(data.rawDepthUrl, signal),
     ]);
     const [item, gt] = await Promise.all([
-      prepareInput({ id, rgb, depth }, signal),
+      prepareInput(
+        {
+          id,
+          rgb: new File([rgb], `${id}_rgb.png`, { type: 'image/png' }),
+          depth: new File([depth], `${id}_depth.png`, { type: 'image/png' }),
+        },
+        signal,
+      ),
       decodeGroundTruth(data.gt, signal),
     ]);
     return { ...item, gt };

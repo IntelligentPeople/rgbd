@@ -11,7 +11,7 @@ function result(): Comparison {
         role: 'baseline',
         name: 'baseline',
         version: '1',
-        source: 'live',
+
         elapsedMs: 1,
         status: 'success',
         instances: [],
@@ -20,7 +20,7 @@ function result(): Comparison {
         role: 'improved',
         name: 'improved',
         version: '1',
-        source: 'live',
+
         elapsedMs: 1,
         status: 'error',
         message: 'failed',

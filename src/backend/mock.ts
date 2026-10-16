@@ -1,11 +1,6 @@
-import type {
-  Comparison,
-  InferenceInput,
-  InferenceAdapter,
-  PredictionInstance,
-} from '../domain/types';
-import { fingerprint } from '../input/fingerprint';
-import { decodePredictions, readJson, type FixtureInstance } from './resources';
+import type { Comparison, InferenceInput, DemoBackend, PredictionInstance } from '../domain/types';
+import { fingerprint } from '../backend/fingerprint';
+import { decodePredictions, readJson, type FixtureInstance } from '../providers/resources';
 export type FixtureEntry = { rgbHash: string; depthHash: string; resultUrl: string };
 type Fixture = { baseline: FixtureInstance[]; improved: FixtureInstance[] };
 type FixtureStore = {
@@ -32,12 +27,7 @@ function delay(ms: number, signal?: AbortSignal) {
     signal?.addEventListener('abort', abort, { once: true });
   });
 }
-export class MockAdapter implements InferenceAdapter {
-  readonly info = {
-    source: 'mock' as const,
-    label: '模拟演示',
-    description: '预测由固定测试数据提供，不代表模型性能；耗时为模拟值。',
-  };
+export class MockBackendAdapter implements DemoBackend {
   private failNext: boolean;
   constructor(
     failOnce = false,
@@ -49,7 +39,7 @@ export class MockAdapter implements InferenceAdapter {
     await delay(700, signal);
     if (this.failNext) {
       this.failNext = false;
-      throw new Error('模拟请求失败，请重试。');
+      throw new Error('处理失败，请重试。');
     }
     const [hashes, entries] = await Promise.all([
       fingerprint(input, signal),
@@ -59,8 +49,7 @@ export class MockAdapter implements InferenceAdapter {
     const entry = entries.find(
       (item) => item.rgbHash === hashes.rgbHash && item.depthHash === hashes.depthHash,
     );
-    if (!entry)
-      throw new Error('当前开发适配器没有该输入的测试结果，请使用内置样例或上传同一组原始文件。');
+    if (!entry) throw new Error('暂时无法处理此输入，请更换输入后重试。');
     const fixture = await this.store.load(entry.resultUrl, signal);
     const [baseline, improved] = await Promise.all([
       this.store.decode(fixture.baseline, signal),
@@ -73,8 +62,8 @@ export class MockAdapter implements InferenceAdapter {
         {
           role: 'baseline',
           name: '基线模型',
-          version: 'fixture-v1',
-          source: 'mock',
+          version: 'v1',
+
           status: 'success',
           elapsedMs: 420,
           instances: baseline,
@@ -82,8 +71,8 @@ export class MockAdapter implements InferenceAdapter {
         {
           role: 'improved',
           name: '改进模型',
-          version: 'fixture-v1',
-          source: 'mock',
+          version: 'v1',
+
           status: 'success',
           elapsedMs: 510,
           instances: improved,

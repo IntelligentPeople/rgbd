@@ -42,9 +42,7 @@ export function ComparisonViewer({
     panels.push({
       title: model?.name ?? (role === 'baseline' ? '基线模型' : '改进模型'),
       kind: role,
-      subtitle: model
-        ? `${model.source === 'mock' ? '模拟预测' : model.source === 'cached' ? '真实缓存预测' : '实时预测'} · ${model.version}`
-        : '等待运行',
+      subtitle: model ? model.version : '等待运行',
       instances: model?.status === 'success' ? model.instances : [],
       error: model?.status === 'error' ? model.message : undefined,
       pending: !model,
@@ -161,7 +159,7 @@ export function ComparisonViewer({
                 {(() => {
                   const model = comparison?.models.find((m) => m.role === panel.kind);
                   return model?.status === 'success'
-                    ? `${model.source === 'mock' ? '模拟耗时' : '推理耗时'} ${(model.elapsedMs / 1000).toFixed(2)} s${visibleInstances(model.instances, threshold).length === 0 ? ' · 当前阈值下无实例' : ''}`
+                    ? `处理耗时 ${(model.elapsedMs / 1000).toFixed(2)} s${visibleInstances(model.instances, threshold).length === 0 ? ' · 当前阈值下无实例' : ''}`
                     : panel.error
                       ? '请重新运行对比'
                       : '';

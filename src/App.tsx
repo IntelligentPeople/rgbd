@@ -1,27 +1,19 @@
 import { useState } from 'react';
-import type { InferenceAdapter, SampleRepository, ViewTransform } from './domain/types';
+import type { DemoBackend, SampleRepository, ViewTransform } from './domain/types';
 import { COURSE_INPUT } from './domain/inputSpec';
 import { useDemo } from './application/useDemo';
 import { ComparisonViewer } from './components/ComparisonViewer';
-import { UploadPanel } from './components/UploadPanel';
+import { InputPanel } from './components/InputPanel';
 export default function App({
   repository,
-  adapter,
+  backend,
 }: {
   repository: SampleRepository;
-  adapter: InferenceAdapter;
+  backend: DemoBackend;
 }) {
-  const demo = useDemo(repository, adapter);
-  const [mode, setMode] = useState<'samples' | 'upload'>('samples');
+  const demo = useDemo(repository, backend);
   const [view, setView] = useState<ViewTransform>({ zoom: 1, x: 0, y: 0 });
   const resetView = () => setView({ zoom: 1, x: 0, y: 0 });
-  const changeMode = (next: typeof mode) => {
-    if (next === mode) return;
-    setMode(next);
-    demo.reset();
-    resetView();
-    if (next === 'samples' && demo.samples[0]) demo.select(demo.samples[0].id);
-  };
   return (
     <>
       <header className="topbar">
@@ -33,82 +25,58 @@ export default function App({
             RGB-D<span>小目标实例分割</span>
           </strong>
         </a>
-        {adapter.info.source === 'mock' && (
-          <details className="mode-info">
-            <summary>{adapter.info.label}</summary>
-            <p>{adapter.info.description}</p>
-          </details>
-        )}
       </header>
       <main>
         <section className="input-section">
           <div className="section-heading">
-            <h1>输入场景</h1>
-            <div className="input-actions">
-              <div className="tabs" role="group" aria-label="输入方式">
-                <button
-                  aria-pressed={mode === 'samples'}
-                  className={mode === 'samples' ? 'active' : ''}
-                  onClick={() => changeMode('samples')}
-                >
-                  内置样例
-                </button>
-                <button
-                  aria-pressed={mode === 'upload'}
-                  className={mode === 'upload' ? 'active' : ''}
-                  onClick={() => changeMode('upload')}
-                >
-                  上传 RGB-D
-                </button>
-              </div>
-              <button
-                className="primary"
-                disabled={!demo.item || demo.loading || demo.running}
-                onClick={() => void demo.run()}
-              >
-                {demo.running ? '正在运行…' : demo.comparison ? '重新对比' : '运行对比'}
-              </button>
-            </div>
+            <h1>RGB-D 输入</h1>
+            <button
+              className="primary"
+              disabled={!demo.item || demo.loading || demo.running}
+              onClick={() => void demo.run()}
+            >
+              {demo.running ? '正在运行…' : demo.comparison ? '重新对比' : '运行对比'}
+            </button>
           </div>
-          {mode === 'samples' ? (
-            <>
-              {demo.listError && (
-                <div className="error-box" role="alert">
-                  {demo.listError} <button onClick={demo.retryList}>重试加载</button>
-                </div>
-              )}
-              <div className="sample-grid">
-                {demo.samples.map((sample) => (
-                  <button
-                    key={sample.id}
-                    className={`sample ${sample.id === demo.selected ? 'selected' : ''}`}
-                    aria-pressed={sample.id === demo.selected}
-                    onClick={() => {
-                      demo.select(sample.id);
-                      resetView();
-                    }}
-                  >
-                    <div className="thumbnail">
-                      <img src={sample.rgbUrl} alt={sample.title} />
-                      {sample.id === demo.selected && <b>✓</b>}
-                    </div>
-                    <strong>{sample.title}</strong>
-                    <small>
-                      {sample.instanceCount} 个实例 · {sample.smallCount} 个小目标
-                    </small>
-                  </button>
-                ))}
+          <InputPanel
+            files={demo.files}
+            errors={demo.fileErrors}
+            checking={demo.checking}
+            onChoose={(role, file) => {
+              resetView();
+              void demo.chooseFile(role, file);
+            }}
+          />
+          <details className="sample-shortcut">
+            <summary>使用样例填入</summary>
+            {demo.listError && (
+              <div className="error-box" role="alert">
+                {demo.listError} <button onClick={demo.retryList}>重试加载</button>
               </div>
-            </>
-          ) : (
-            <UploadPanel
-              onReady={demo.upload}
-              onInvalidate={() => {
-                demo.reset();
-                resetView();
-              }}
-            />
-          )}
+            )}
+            <div className="sample-grid">
+              {demo.samples.map((sample) => (
+                <button
+                  key={sample.id}
+                  className={`sample ${sample.id === demo.selected ? 'selected' : ''}`}
+                  aria-pressed={sample.id === demo.selected}
+                  onClick={() => {
+                    demo.select(sample.id);
+                    resetView();
+                  }}
+                >
+                  <div className="thumbnail">
+                    <img src={sample.rgbUrl} alt={sample.title} />
+                    {sample.id === demo.selected && <b>✓</b>}
+                  </div>
+                  <strong>{sample.title}</strong>
+                  <small>
+                    {sample.instanceCount} 个实例 · {sample.smallCount} 个小目标
+                  </small>
+                </button>
+              ))}
+            </div>
+          </details>
           {demo.loading && (
             <p role="status" className="notice">
               正在准备 RGB-D 输入…
@@ -120,6 +88,7 @@ export default function App({
                 RGB 与深度预览{' '}
                 <span>
                   {COURSE_INPUT.width}×{COURSE_INPUT.height}
+                  {demo.item.gt ? '，包含真实标注' : ''}
                 </span>
               </summary>
               <div className="input-images">
@@ -134,12 +103,12 @@ export default function App({
                   </figcaption>
                 </figure>
                 <div className="input-description">
-                  <strong>输入信息</strong>
+                  <strong>输入要求</strong>
                   <p>
-                    原始深度 × {COURSE_INPUT.depthScaleM} = 米<br />
-                    无效值：{COURSE_INPUT.depthInvalidCode}
+                    RGB 与深度需配准。
                     <br />
-                    预览按有效深度范围着色，推理使用原始文件。
+                    原始深度 × {COURSE_INPUT.depthScaleM} = 米<br />
+                    无效值：{COURSE_INPUT.depthInvalidCode}，每文件最大 30 MB。
                   </p>
                 </div>
               </div>

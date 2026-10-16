@@ -73,32 +73,6 @@ a {
   margin-left: 18px;
   color: var(--muted);
 }
-.mode-info {
-  position: relative;
-  font-size: 12px;
-  color: #796035;
-}
-.mode-info summary {
-  cursor: pointer;
-  padding: 4px 10px;
-  border: 1px solid #e5d9c4;
-  border-radius: 4px;
-  background: #fcf9f1;
-}
-.mode-info p {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  width: min(320px, 80vw);
-  z-index: 5;
-  margin: 8px 0 0;
-  padding: 16px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: var(--muted);
-  box-shadow: 0 8px 24px #26344214;
-}
 main {
   max-width: 1680px;
   padding: 25px 32px 0;
@@ -118,34 +92,8 @@ h2 {
   gap: 16px;
   margin-bottom: 16px;
 }
-.input-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
 .input-section {
   padding-bottom: 20px;
-}
-.tabs {
-  display: flex;
-  gap: 3px;
-  background: #e9eef4;
-  padding: 3px;
-  border-radius: 6px;
-}
-.tabs button {
-  border: 0;
-  background: transparent;
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.tabs .active {
-  background: #fff;
-  color: var(--accent);
-  box-shadow: 0 1px 3px #26344212;
-  font-weight: 600;
 }
 .sample-grid {
   display: grid;
@@ -460,10 +408,7 @@ h2 {
   font-size: 11px;
   border-top: 1px solid var(--line);
 }
-.upload-panel {
-  padding: 4px 0 24px;
-}
-.upload-fields {
+.input-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
@@ -485,24 +430,6 @@ h2 {
 .file-field > span {
   font-size: 12px;
   color: var(--muted);
-}
-.file-field input {
-  max-width: 100%;
-  font-size: 12px;
-}
-.file-field input::file-selector-button {
-  border: 1px solid #c6d5e5;
-  border-radius: 4px;
-  padding: 6px 12px;
-  margin-right: 12px;
-  background: #f0f5fb;
-  color: #345d8a;
-  cursor: pointer;
-}
-.upload-preview {
-  width: 180px;
-  margin-top: 18px;
-  border-radius: 4px;
 }
 .notice {
   font-size: 12px;
@@ -576,10 +503,6 @@ h2 {
     flex-direction: column;
     align-items: stretch;
   }
-  .input-actions {
-    justify-content: space-between;
-    gap: 8px;
-  }
   .primary {
     min-width: 104px;
     padding: 8px 12px;
@@ -594,9 +517,6 @@ h2 {
   h1,
   h2 {
     font-size: 16px;
-  }
-  .tabs button {
-    padding: 5px 9px;
   }
   .sample strong {
     font-size: 11px;
@@ -619,10 +539,60 @@ h2 {
   .input-images figure {
     width: 44%;
   }
-  .upload-fields {
+  .input-fields {
     grid-template-columns: 1fr;
   }
   .file-field {
     padding: 18px;
   }
+}
+
+.sample-shortcut {
+  margin-top: 14px;
+  font-size: 12px;
+}
+.sample-shortcut summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--accent);
+}
+.sample-shortcut .sample-grid {
+  margin-top: 14px;
+}
+.file-selection {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+.file-picker {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid #c6d5e5;
+  border-radius: 4px;
+  padding: 6px 12px;
+  background: #f0f5fb;
+  color: #345d8a;
+  font-size: 12px;
+  cursor: pointer;
+}
+.file-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.file-picker:focus-within {
+  outline: 3px solid #83b8ed;
+  outline-offset: 3px;
+}
+.file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
 }

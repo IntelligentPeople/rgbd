@@ -2,17 +2,25 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   Comparison,
   DemoItem,
-  InferenceAdapter,
+  DemoBackend,
   InferenceInput,
   SampleRepository,
   SampleSummary,
+  InputFiles,
+  InputRole,
 } from '../domain/types';
 import { prepareInput } from '../input/prepare';
+import { validateUpload } from '../upload/validate';
 import { validateComparison } from './comparison';
 const message = (error: unknown) => (error instanceof Error ? error.message : '操作失败，请重试。');
-export function useDemo(repository: SampleRepository, adapter: InferenceAdapter) {
+export function useDemo(repository: SampleRepository, backend: DemoBackend) {
   const [samples, setSamples] = useState<SampleSummary[]>([]);
   const [selected, setSelected] = useState('');
+  const [files, setFiles] = useState<InputFiles>({});
+  const filesRef = useRef<InputFiles>({});
+  const [fileErrors, setFileErrors] = useState<Partial<Record<InputRole, string>>>({});
+  const [checking, setChecking] = useState<Partial<Record<InputRole, boolean>>>({});
+  const fieldRevisions = useRef({ rgb: 0, depth: 0 });
   const [item, setItem] = useState<DemoItem>();
   const [comparison, setComparison] = useState<Comparison>();
   const [loading, setLoading] = useState(false);
@@ -43,7 +51,11 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
       setLoading(true);
       try {
         const value = await prepare(controller.signal);
-        if (current === sequence.current && !controller.signal.aborted) setItem(value);
+        if (current === sequence.current && !controller.signal.aborted) {
+          filesRef.current = { rgb: value.input.rgb, depth: value.input.depth };
+          setFiles(filesRef.current);
+          setItem(value);
+        }
       } catch (e) {
         if (current === sequence.current && !controller.signal.aborted) setError(message(e));
       } finally {
@@ -54,6 +66,12 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
   );
   const select = useCallback(
     (id: string) => {
+      fieldRevisions.current.rgb++;
+      fieldRevisions.current.depth++;
+      filesRef.current = {};
+      setFiles({});
+      setFileErrors({});
+      setChecking({});
       setSelected(id);
       lastLoad.current = () => {
         void load((signal) => repository.loadSample(id, signal));
@@ -70,37 +88,48 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
       .then((items) => {
         if (controller.signal.aborted) return;
         setSamples(items);
-        if (!items.length) setListError('没有可用样例，请先生成样例资源。');
+        if (!items.length) setListError('没有可用样例。');
       })
       .catch((e) => {
         if (!controller.signal.aborted) setListError(message(e));
       });
     return () => controller.abort();
   }, [repository, listRevision]);
-  // Select the first sample only once, so a late list response cannot replace uploads.
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (!initialized.current && samples[0]) {
-      initialized.current = true;
-      select(samples[0].id);
-    }
-  }, [samples, select]);
-  const reset = () => {
-    initialized.current = true;
-    setSelected('');
-    lastLoad.current = undefined;
-    clear();
-  };
   const upload = (input: InferenceInput) => {
-    initialized.current = true;
-    setSelected('');
     lastLoad.current = () => {
       void load((signal) => prepareInput(input, signal));
     };
     lastLoad.current();
   };
+  const chooseFile = async (role: InputRole, file?: File) => {
+    const revision = ++fieldRevisions.current[role];
+    clear();
+    setSelected('');
+    lastLoad.current = undefined;
+    filesRef.current = { ...filesRef.current, [role]: undefined };
+    setFiles(filesRef.current);
+    setFileErrors((current) => ({ ...current, [role]: undefined }));
+    setChecking((current) => ({ ...current, [role]: Boolean(file) }));
+    if (!file) return;
+    try {
+      await validateUpload(file, role);
+      if (revision !== fieldRevisions.current[role]) return;
+      filesRef.current = { ...filesRef.current, [role]: file };
+      setFiles(filesRef.current);
+      const { rgb, depth } = filesRef.current;
+      if (rgb && depth) upload({ id: crypto.randomUUID(), rgb, depth });
+    } catch (e) {
+      if (revision === fieldRevisions.current[role])
+        setFileErrors((current) => ({ ...current, [role]: message(e) }));
+    } finally {
+      if (revision === fieldRevisions.current[role])
+        setChecking((current) => ({ ...current, [role]: false }));
+    }
+  };
   useEffect(
     () => () => {
+      fieldRevisions.current.rgb++;
+      fieldRevisions.current.depth++;
       loadController.current?.abort();
       runController.current?.abort();
     },
@@ -116,8 +145,7 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
     setComparison(undefined);
     setError('');
     try {
-      // Only original files cross this boundary. No GT, previews or source-specific IDs.
-      const result = await adapter.compare(item.input, controller.signal);
+      const result = await backend.compare(item.input, controller.signal);
       if (current === sequence.current && !controller.signal.aborted) {
         validateComparison(result, item.input);
         setComparison(result);
@@ -131,6 +159,9 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
   return {
     samples,
     selected,
+    files,
+    fileErrors,
+    checking,
     item,
     comparison,
     loading,
@@ -138,8 +169,7 @@ export function useDemo(repository: SampleRepository, adapter: InferenceAdapter)
     error,
     listError,
     select,
-    upload,
-    reset,
+    chooseFile,
     run,
     retryList: () => refreshList((v) => v + 1),
     retryInput: () => lastLoad.current?.(),

@@ -23,12 +23,10 @@ export type DemoItem = {
   depthPreview: HTMLImageElement;
   gt?: GroundTruthInstance[];
 };
-export type ResultSource = 'mock' | 'cached' | 'live';
 export type ModelResult = {
   role: 'baseline' | 'improved';
   name: string;
   version: string;
-  source: ResultSource;
   elapsedMs: number;
 } & ({ status: 'success'; instances: PredictionInstance[] } | { status: 'error'; message: string });
 export type Comparison = { inputId: string; models: [ModelResult, ModelResult] };
@@ -36,10 +34,11 @@ export interface SampleRepository {
   listSamples(signal?: AbortSignal): Promise<SampleSummary[]>;
   loadSample(id: string, signal?: AbortSignal): Promise<DemoItem>;
 }
-export interface InferenceAdapter {
-  readonly info: { source: ResultSource; label: string; description?: string };
+export interface DemoBackend {
   compare(input: InferenceInput, signal?: AbortSignal): Promise<Comparison>;
 }
+export type InputFiles = { rgb?: Blob; depth?: Blob };
+export type InputRole = keyof InputFiles;
 export type ViewTransform = { zoom: number; x: number; y: number };
 export type RenderOptions = {
   view: ViewTransform;
