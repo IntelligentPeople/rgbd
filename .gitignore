@@ -1,0 +1,12 @@
+node_modules/
+dist/
+public/demo-data/
+.env*
+!.env.example
+*.local
+*.log
+__pycache__/
+.venv/
+.cache/
+coverage/
+.DS_Store
