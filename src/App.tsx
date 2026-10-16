@@ -133,15 +133,6 @@ export default function App({
             setView={setView}
           />
         )}
-        <details className="metrics-section">
-          <summary>
-            实验指标<span>待接入真实评测</span>
-          </summary>
-          <p>
-            完整测试集的 Mask APₛ、Mask
-            AP、模型大小与推理速度将在评测后提供，与当前图片和展示阈值无关。
-          </p>
-        </details>
       </main>
       <footer className="page-footer">
         <span>RGB-D 实例分割</span>

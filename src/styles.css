@@ -379,26 +379,6 @@ h2 {
   max-width: 70ch;
   margin: 8px 0;
 }
-.metrics-section {
-  margin-top: 24px;
-  border-top: 1px solid var(--line);
-  padding: 16px 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-.metrics-section summary {
-  cursor: pointer;
-  color: #40556b;
-}
-.metrics-section summary span {
-  float: right;
-  font-size: 11px;
-  color: var(--muted);
-}
-.metrics-section p {
-  max-width: 70ch;
-  margin: 12px 0 0;
-}
 .page-footer {
   display: flex;
   justify-content: space-between;
