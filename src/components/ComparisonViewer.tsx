@@ -1,11 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import type {
-  Comparison,
-  DemoInput,
-  Instance,
-  RenderOptions,
-  ViewTransform,
-} from '../domain/types';
+import type { Comparison, DemoItem, Instance, RenderOptions, ViewTransform } from '../domain/types';
 import { MaskViewport } from '../viewer/MaskViewport';
 import { visibleInstances, zoomView } from '../viewer/render';
 import { exportComparison } from '../viewer/export';
@@ -16,7 +10,7 @@ export function ComparisonViewer({
   view,
   setView,
 }: {
-  input: DemoInput;
+  input: DemoItem;
   comparison?: Comparison;
   running: boolean;
   view: ViewTransform;

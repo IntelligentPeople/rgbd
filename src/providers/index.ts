@@ -1,9 +1,8 @@
-import type { DemoProvider } from '../domain/types';
-import { MockProvider } from './mock';
-// Future HttpProvider implements DemoProvider and normalizes API masks here.
-// No transport protocol or endpoint is imposed on the inference team.
-export function createProvider(): DemoProvider {
+import type { InferenceAdapter } from '../domain/types';
+import { MockAdapter } from './mock';
+// HTTP transport is implemented here later, without changing input or page flows.
+export function createAdapter(): InferenceAdapter {
   const mode = import.meta.env.VITE_DEMO_PROVIDER ?? 'mock';
-  if (mode !== 'mock') throw new Error(`尚未实现 Provider：${mode}。请使用 mock。`);
-  return new MockProvider(import.meta.env.VITE_MOCK_FAIL_ONCE === 'true');
+  if (mode !== 'mock') throw new Error(`尚未实现推理适配器：${mode}。`);
+  return new MockAdapter(import.meta.env.VITE_MOCK_FAIL_ONCE === 'true');
 }

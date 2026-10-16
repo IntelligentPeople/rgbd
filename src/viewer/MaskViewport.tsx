@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import type { DemoInput, Instance, RenderOptions, ViewTransform } from '../domain/types';
+import type { DemoItem, Instance, RenderOptions, ViewTransform } from '../domain/types';
 import { drawScene, zoomView } from './render';
 export function MaskViewport({
   input,
@@ -8,7 +8,7 @@ export function MaskViewport({
   setView,
   label,
 }: {
-  input: DemoInput;
+  input: DemoItem;
   instances: Instance[];
   options: RenderOptions;
   setView: Dispatch<SetStateAction<ViewTransform>>;

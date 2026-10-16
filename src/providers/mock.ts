@@ -1,21 +1,22 @@
 import type {
   Comparison,
-  ComparisonInput,
-  DemoInput,
-  DemoProvider,
-  SampleSummary,
+  InferenceInput,
+  InferenceAdapter,
+  PredictionInstance,
 } from '../domain/types';
-import { decodeInstances, loadImage, readJson, type FixtureInstance } from './resources';
-type Fixture = {
-  width: number;
-  height: number;
-  rgbUrl: string;
-  depthUrl: string;
-  depthScaleM: number;
-  depthInvalidCode: number;
-  gt: FixtureInstance[];
-  baseline: FixtureInstance[];
-  improved: FixtureInstance[];
+import { fingerprint } from '../input/fingerprint';
+import { decodePredictions, readJson, type FixtureInstance } from './resources';
+export type FixtureEntry = { rgbHash: string; depthHash: string; resultUrl: string };
+type Fixture = { baseline: FixtureInstance[]; improved: FixtureInstance[] };
+type FixtureStore = {
+  list(signal?: AbortSignal): Promise<FixtureEntry[]>;
+  load(url: string, signal?: AbortSignal): Promise<Fixture>;
+  decode(items: FixtureInstance[], signal?: AbortSignal): Promise<PredictionInstance[]>;
+};
+const staticStore: FixtureStore = {
+  list: (signal) => readJson('/demo-data/mock-index.json', signal),
+  load: (url, signal) => readJson(url, signal),
+  decode: decodePredictions,
 };
 function delay(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -31,52 +32,43 @@ function delay(ms: number, signal?: AbortSignal) {
     signal?.addEventListener('abort', abort, { once: true });
   });
 }
-export class MockProvider implements DemoProvider {
+export class MockAdapter implements InferenceAdapter {
+  readonly info = {
+    source: 'mock' as const,
+    label: '模拟演示',
+    description: '预测由固定测试数据提供，不代表模型性能；耗时为模拟值。',
+  };
   private failNext: boolean;
-  constructor(failOnce = false) {
+  constructor(
+    failOnce = false,
+    private store: FixtureStore = staticStore,
+  ) {
     this.failNext = failOnce;
   }
-  getCapabilities() {
-    return { mode: 'mock' as const, uploadInference: false };
-  }
-  listSamples(signal?: AbortSignal) {
-    return readJson<SampleSummary[]>('/demo-data/index.json', signal);
-  }
-  private fixture(id: string, signal?: AbortSignal) {
-    return readJson<Fixture>(`/demo-data/${encodeURIComponent(id)}/sample.json`, signal);
-  }
-  async loadSample(id: string, signal?: AbortSignal): Promise<DemoInput> {
-    const data = await this.fixture(id, signal);
-    const [rgb, depthPreview, gt] = await Promise.all([
-      loadImage(data.rgbUrl, signal),
-      loadImage(data.depthUrl, signal),
-      decodeInstances(data.gt, signal),
-    ]);
-    return {
-      id,
-      width: data.width,
-      height: data.height,
-      rgb,
-      depthPreview,
-      gt,
-      depthScaleM: data.depthScaleM,
-      depthInvalidCode: data.depthInvalidCode,
-    };
-  }
-  async compare(input: ComparisonInput, signal?: AbortSignal): Promise<Comparison> {
-    if (input.kind !== 'sample') throw new Error('Mock 模式尚未接入上传推理。');
+  async compare(input: InferenceInput, signal?: AbortSignal): Promise<Comparison> {
     await delay(700, signal);
     if (this.failNext) {
       this.failNext = false;
       throw new Error('模拟请求失败，请重试。');
     }
-    const fixture = await this.fixture(input.sampleId, signal);
-    const [baseline, improved] = await Promise.all([
-      decodeInstances(fixture.baseline, signal),
-      decodeInstances(fixture.improved, signal),
+    const [hashes, entries] = await Promise.all([
+      fingerprint(input, signal),
+      this.store.list(signal),
     ]);
+    signal?.throwIfAborted();
+    const entry = entries.find(
+      (item) => item.rgbHash === hashes.rgbHash && item.depthHash === hashes.depthHash,
+    );
+    if (!entry)
+      throw new Error('当前开发适配器没有该输入的测试结果，请使用内置样例或上传同一组原始文件。');
+    const fixture = await this.store.load(entry.resultUrl, signal);
+    const [baseline, improved] = await Promise.all([
+      this.store.decode(fixture.baseline, signal),
+      this.store.decode(fixture.improved, signal),
+    ]);
+    signal?.throwIfAborted();
     return {
-      inputId: input.sampleId,
+      inputId: input.id,
       models: [
         {
           role: 'baseline',

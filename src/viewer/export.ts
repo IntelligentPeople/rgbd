@@ -1,7 +1,7 @@
-import type { DemoInput, Instance, RenderOptions } from '../domain/types';
+import type { DemoItem, Instance, RenderOptions } from '../domain/types';
 import { drawScene } from './render';
 export async function exportComparison(
-  input: DemoInput,
+  input: DemoItem,
   panels: { title: string; subtitle: string; instances: Instance[] }[],
   options: RenderOptions,
 ) {
@@ -28,7 +28,7 @@ export async function exportComparison(
   ctx.fillStyle = '#34565a';
   ctx.font = '18px sans-serif';
   ctx.fillText(
-    `RGB-D / ${input.id} · 阈值 ${options.threshold.toFixed(2)} · 放大 ${options.view.zoom.toFixed(1)}× · 颜色仅区分实例，不代表跨模型匹配`,
+    `RGB-D / ${input.input.id} · 阈值 ${options.threshold.toFixed(2)} · 放大 ${options.view.zoom.toFixed(1)}× · 颜色仅区分实例，不代表跨模型匹配`,
     24,
     canvas.height - 24,
   );
@@ -41,7 +41,7 @@ export async function exportComparison(
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `rgbd-${input.id}-comparison.png`;
+  anchor.download = `rgbd-${input.input.id}-comparison.png`;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

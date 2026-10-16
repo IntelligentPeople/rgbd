@@ -1,4 +1,4 @@
-import type { DemoInput, Instance, RenderOptions } from '../domain/types';
+import type { DemoItem, Instance, RenderOptions } from '../domain/types';
 export const COLORS = ['#26c9c0', '#ffbe57', '#ac91ff', '#ff7c9a', '#72c8ff', '#a5d77c', '#ff985f'];
 export function visibleInstances(instances: Instance[], threshold: number) {
   return instances.filter(
@@ -53,7 +53,7 @@ export function drawScene(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  input: DemoInput,
+  input: DemoItem,
   instances: Instance[],
   options: RenderOptions,
 ) {
@@ -72,7 +72,7 @@ export function drawScene(
   ctx.translate(size / 2, size / 2);
   ctx.scale(options.view.zoom, options.view.zoom);
   ctx.translate(-size / 2, -size / 2);
-  ctx.drawImage(input.rgb, 0, 0, size, size);
+  ctx.drawImage(input.rgbPreview, 0, 0, size, size);
   if (options.showMasks) {
     ctx.globalAlpha = options.opacity;
     visibleInstances(instances, options.threshold).forEach((instance) => {

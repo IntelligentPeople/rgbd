@@ -3,6 +3,7 @@ import argparse
 import gzip
 import json
 import shutil
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,7 @@ def prepare(dataset, output):
         raise ValueError('验证集未找到所需六类样例，请检查数据集路径与完整性。')
     output.mkdir(parents=True, exist_ok=True)
     index = []
+    fixture_index = []
     density_names = {'low': '低密度', 'medium': '中密度', 'high': '高密度'}
     for composition, density in keys:
         image, annotations = candidates[(composition, density)]
@@ -39,6 +41,9 @@ def prepare(dataset, output):
         target.mkdir(exist_ok=True)
         base = f'/demo-data/{sample_id}'
         shutil.copyfile(dataset / image['file_name'], target / 'rgb.png')
+        shutil.copyfile(dataset / image['depth_file_name'], target / 'depth-raw.png')
+        rgb_hash = hashlib.sha256((target / 'rgb.png').read_bytes()).hexdigest()
+        depth_hash = hashlib.sha256((target / 'depth-raw.png').read_bytes()).hexdigest()
         depth = np.array(Image.open(dataset / image['depth_file_name']), dtype=np.float32)
         valid = depth != image['depth_invalid_code']
         meters = depth * image['depth_scale_m']
@@ -49,7 +54,7 @@ def prepare(dataset, output):
         colors = np.stack([np.interp(t, [0, .5, 1], stops[:, c]) for c in range(3)], axis=-1).astype(np.uint8)
         colors[~valid] = 0
         Image.fromarray(colors).save(target / 'depth.png')
-        fixture = {'width': image['width'], 'height': image['height'], 'rgbUrl': base + '/rgb.png', 'depthUrl': base + '/depth.png', 'depthScaleM': image['depth_scale_m'], 'depthInvalidCode': image['depth_invalid_code'], 'depthRangeM': [lo, hi], 'gt': [], 'baseline': [], 'improved': []}
+        fixture = {'gt': [], 'baseline': [], 'improved': []}
         for i, annotation in enumerate(sorted(annotations, key=lambda a: a['id'])):
             rle = dict(annotation['segmentation'])
             if isinstance(rle['counts'], str):
@@ -69,10 +74,13 @@ def prepare(dataset, output):
                 filename = f'{role}-{i}.png'
                 (picture.filter(ImageFilter.MinFilter(erosion)) if erosion > 1 else picture).save(target / filename)
                 fixture[role].append({**item, 'maskUrl': base + '/' + filename, 'score': round(.35 + ((i * 17 + 13) % 64) / 100, 2)})
-        write_json(target / 'sample.json', fixture)
+        write_json(target / 'sample.json', {'rgbUrl': base + '/rgb.png', 'rawDepthUrl': base + '/depth-raw.png', 'gt': fixture['gt']})
+        write_json(target / 'mock.json', {'baseline': fixture['baseline'], 'improved': fixture['improved']})
+        fixture_index.append({'rgbHash': rgb_hash, 'depthHash': depth_hash, 'resultUrl': base + '/mock.json'})
         index.append({'id': sample_id, 'title': f'{density_names[density]} · ' + ('同型零件' if composition == 'single_model' else '混合零件'), 'description': '验证集 / 合成场景 / ' + density_names[density], 'density': density, 'rgbUrl': base + '/rgb.png', 'instanceCount': len(annotations), 'smallCount': sum(a['area'] <= 1024 for a in annotations)})
         print(f'{sample_id}: {len(annotations)} instances, depth {lo:.3f}–{hi:.3f} m')
     write_json(output / 'index.json', index)
+    write_json(output / 'mock-index.json', fixture_index)
     print(f'Prepared {len(index)} samples in {output}')
 
 

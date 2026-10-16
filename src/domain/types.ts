@@ -1,5 +1,7 @@
 export type Mask = { width: number; height: number; pixels: Uint8Array };
-export type Instance = { id: string; categoryId: number; mask: Mask; score?: number };
+export type GroundTruthInstance = { id: string; categoryId: number; mask: Mask; score?: never };
+export type PredictionInstance = { id: string; categoryId: number; mask: Mask; score: number };
+export type Instance = GroundTruthInstance | PredictionInstance;
 export type SampleSummary = {
   id: string;
   title: string;
@@ -9,31 +11,34 @@ export type SampleSummary = {
   instanceCount: number;
   smallCount: number;
 };
-export type DemoInput = {
+// All sources submit the same original PNG payload. GT and previews never enter inference.
+export type InferenceInput = {
   id: string;
-  width: number;
-  height: number;
-  rgb: HTMLImageElement;
-  depthPreview?: HTMLImageElement;
-  depthScaleM: number;
-  depthInvalidCode: number;
-  gt?: Instance[];
+  rgb: Blob;
+  depth: Blob;
 };
-export type ComparisonInput =
-  { kind: 'sample'; sampleId: string } | { kind: 'upload'; rgb: File; depth: File };
+export type DemoItem = {
+  input: InferenceInput;
+  rgbPreview: HTMLImageElement;
+  depthPreview: HTMLImageElement;
+  gt?: GroundTruthInstance[];
+};
+export type ResultSource = 'mock' | 'cached' | 'live';
 export type ModelResult = {
   role: 'baseline' | 'improved';
   name: string;
   version: string;
-  source: 'mock' | 'cached' | 'live';
+  source: ResultSource;
   elapsedMs: number;
-} & ({ status: 'success'; instances: Instance[] } | { status: 'error'; message: string });
-export type Comparison = { inputId: string; models: ModelResult[] };
-export interface DemoProvider {
-  getCapabilities(): { mode: 'mock' | 'http'; uploadInference: boolean };
+} & ({ status: 'success'; instances: PredictionInstance[] } | { status: 'error'; message: string });
+export type Comparison = { inputId: string; models: [ModelResult, ModelResult] };
+export interface SampleRepository {
   listSamples(signal?: AbortSignal): Promise<SampleSummary[]>;
-  loadSample(id: string, signal?: AbortSignal): Promise<DemoInput>;
-  compare(input: ComparisonInput, signal?: AbortSignal): Promise<Comparison>;
+  loadSample(id: string, signal?: AbortSignal): Promise<DemoItem>;
+}
+export interface InferenceAdapter {
+  readonly info: { source: ResultSource; label: string; description?: string };
+  compare(input: InferenceInput, signal?: AbortSignal): Promise<Comparison>;
 }
 export type ViewTransform = { zoom: number; x: number; y: number };
 export type RenderOptions = {

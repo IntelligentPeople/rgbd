@@ -1,24 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
+import type { InferenceInput } from '../domain/types';
 import { validateUpload } from '../upload/validate';
-export function UploadPanel() {
+export function UploadPanel({
+  onReady,
+  onInvalidate,
+}: {
+  onReady: (input: InferenceInput) => void;
+  onInvalidate: () => void;
+}) {
   const [files, setFiles] = useState<{ rgb?: File; depth?: File }>({});
   const [errors, setErrors] = useState<{ rgb?: string; depth?: string }>({});
   const [busy, setBusy] = useState<{ rgb?: boolean; depth?: boolean }>({});
-  const [preview, setPreview] = useState('');
+  const accepted = useRef<{ rgb?: File; depth?: File }>({});
   const revisions = useRef({ rgb: 0, depth: 0 });
   useEffect(() => {
-    if (!files.rgb) {
-      setPreview('');
-      return;
-    }
-    const url = URL.createObjectURL(files.rgb);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [files.rgb]);
+    return () => {
+      revisions.current.rgb++;
+      revisions.current.depth++;
+    };
+  }, []);
   const choose = async (role: 'rgb' | 'depth', file?: File) => {
     const revision = ++revisions.current[role];
-    setFiles((current) => ({ ...current, [role]: undefined }));
+    accepted.current = { ...accepted.current, [role]: undefined };
+    setFiles(accepted.current);
     setErrors((current) => ({ ...current, [role]: undefined }));
+    onInvalidate();
     if (!file) {
       setBusy((current) => ({ ...current, [role]: false }));
       return;
@@ -26,8 +32,11 @@ export function UploadPanel() {
     setBusy((current) => ({ ...current, [role]: true }));
     try {
       await validateUpload(file, role);
-      if (revision === revisions.current[role])
-        setFiles((current) => ({ ...current, [role]: file }));
+      if (revision !== revisions.current[role]) return;
+      accepted.current = { ...accepted.current, [role]: file };
+      setFiles(accepted.current);
+      const { rgb, depth } = accepted.current;
+      if (rgb && depth) onReady({ id: crypto.randomUUID(), rgb, depth });
     } catch (error) {
       if (revision === revisions.current[role])
         setErrors((current) => ({
@@ -64,13 +73,7 @@ export function UploadPanel() {
           </label>
         ))}
       </div>
-      {preview && <img className="upload-preview" src={preview} alt="上传的 RGB 预览" />}
-      <p className="notice">
-        {files.rgb && files.depth
-          ? '两张图已通过校验。'
-          : '请选择同一视角、已配准的 RGB 与深度图。'}
-        上传推理尚未接入。
-      </p>
+      <p className="notice">请选择同一视角、已配准的 RGB 与原始深度图。</p>
     </div>
   );
 }
