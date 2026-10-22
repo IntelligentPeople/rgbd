@@ -4,6 +4,7 @@ import App from './App';
 import { createBackend } from './backend';
 import { StaticSampleRepository } from './providers/samples';
 import './styles.css';
+import './workbench.css';
 const root = createRoot(document.getElementById('root')!);
 try {
   const backend = createBackend();

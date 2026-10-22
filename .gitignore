@@ -6,6 +6,7 @@ public/demo-data/
 *.local
 *.log
 __pycache__/
+server/__pycache__/
 .venv/
 .cache/
 coverage/

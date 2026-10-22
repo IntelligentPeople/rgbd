@@ -6,9 +6,10 @@ export function visibleInstances(instances: Instance[], threshold: number) {
   );
 }
 type MaskTile = { canvas: HTMLCanvasElement; x: number; y: number };
-const cache = new WeakMap<Instance, MaskTile>();
-function coloredMask(instance: Instance): MaskTile {
-  const cached = cache.get(instance);
+const cache = new WeakMap<Instance, Map<string, MaskTile>>();
+function coloredMask(instance: Instance, override?: string): MaskTile {
+  const key = override ?? 'instance';
+  const cached = cache.get(instance)?.get(key);
   if (cached) return cached;
   const { width, height, pixels } = instance.mask;
   let left = width,
@@ -32,7 +33,7 @@ function coloredMask(instance: Instance): MaskTile {
   const rgba = ctx.createImageData(canvas.width, canvas.height);
   // Derive colors from stable instance identity, not the filtered list position.
   const hash = [...instance.id].reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 0);
-  const color = COLORS[hash % COLORS.length];
+  const color = override ?? COLORS[hash % COLORS.length];
   const rgb = [1, 3, 5].map((offset) => parseInt(color.slice(offset, offset + 2), 16));
   for (let y = top; y <= bottom; y++) {
     for (let x = left; x <= right; x++) {
@@ -46,7 +47,8 @@ function coloredMask(instance: Instance): MaskTile {
   }
   ctx.putImageData(rgba, 0, 0);
   const tile = { canvas, x: right < 0 ? 0 : left, y: bottom < 0 ? 0 : top };
-  cache.set(instance, tile);
+  if (!cache.has(instance)) cache.set(instance, new Map());
+  cache.get(instance)!.set(key, tile);
   return tile;
 }
 export function drawScene(
@@ -76,7 +78,7 @@ export function drawScene(
   if (options.showMasks) {
     ctx.globalAlpha = options.opacity;
     visibleInstances(instances, options.threshold).forEach((instance) => {
-      const tile = coloredMask(instance);
+      const tile = coloredMask(instance, options.colors?.[instance.id]);
       ctx.drawImage(
         tile.canvas,
         (tile.x / instance.mask.width) * size,
@@ -85,6 +87,34 @@ export function drawScene(
         (tile.canvas.height / instance.mask.height) * size,
       );
     });
+    ctx.globalAlpha = 1;
+    for (const instance of options.missed ?? []) {
+      const { pixels, width: mw, height: mh } = instance.mask;
+      ctx.fillStyle = '#f7b32b';
+      for (let i = 0; i < pixels.length; i++) {
+        if (!pixels[i]) continue;
+        const x = i % mw,
+          y = Math.floor(i / mw);
+        if (
+          x > 0 &&
+          x < mw - 1 &&
+          y > 0 &&
+          y < mh - 1 &&
+          pixels[i - 1] &&
+          pixels[i + 1] &&
+          pixels[i - mw] &&
+          pixels[i + mw]
+        )
+          continue;
+        if ((x + y) % 8 < 5)
+          ctx.fillRect(
+            (x / mw) * size,
+            (y / mh) * size,
+            Math.max(1, size / mw),
+            Math.max(1, size / mh),
+          );
+      }
+    }
   }
   ctx.restore();
 }

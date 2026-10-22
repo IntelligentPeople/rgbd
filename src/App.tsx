@@ -22,7 +22,7 @@ export default function App({
             ▧
           </span>
           <strong>
-            RGB-D<span>小目标实例分割</span>
+            DPSeg<span>RGB-D 小目标实例分割</span>
           </strong>
         </a>
       </header>
@@ -40,11 +40,11 @@ export default function App({
           </div>
           <InputPanel
             files={demo.files}
-            errors={demo.fileErrors}
-            checking={demo.checking}
-            onChoose={(role, file) => {
+            hasGT={Boolean(demo.item?.gt)}
+            loading={demo.loading}
+            onChoose={(file) => {
               resetView();
-              void demo.chooseFile(role, file);
+              demo.choosePackage(file);
             }}
           />
           <details className="sample-shortcut">
@@ -135,7 +135,7 @@ export default function App({
         )}
       </main>
       <footer className="page-footer">
-        <span>RGB-D 实例分割</span>
+        <span>DPSeg · Depth-guided Point Refinement for Segmentation</span>
         <span>课程演示</span>
       </footer>
     </>

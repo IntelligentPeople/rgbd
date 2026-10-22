@@ -1,123 +1,105 @@
-# RGB-D 实例分割 Demo
+# DPSeg Web Demo
 
-用于课程 RGB-D 小目标实例分割任务的交互式演示系统。输入配准的 RGB 与深度图，展示基线模型、改进模型的实例分割结果，并支持 GT 对照、同步缩放、置信度筛选和图片导出。
+DPSeg 的在线推理与实例分割对比界面。输入一组配准的 RGB-D 图像，分别运行 **S0 基线**和 **S4 改进模型**，在同一视图下检查实例掩码、匹配差异和单图 P–R 曲线。
 
-技术栈：React 19、TypeScript、Vite；Python 用于准备演示数据。
+模型与推理算法来自 [算法组 DPSeg](https://github.com/YuryLee/DPSeg)。本仓库负责网页、HTTP 服务及结果可视化，不包含训练代码和模型权重。
 
-## 开发状态
+## 与算法组 Demo 的区别
 
-- **已完成**：文件校验、深度预览、样例填入、结果对比与导出，以及统一输入输出接口。
-- **当前启用**：`MockBackendAdapter`，在浏览器内读取固定测试结果，无需 GPU 或推理服务。
-- **尚未实现**：真实后端适配器、模型服务通信与 AI 推理接入。服务位置和调用协议待与算法组确认。
+| 项目 | 算法组离线 Demo | 本仓库 Web Demo |
+| --- | --- | --- |
+| 结果来源 | 先运行算法工具生成预测，再打开 HTML 查看 | 点击“运行对比”，通过 HTTP 服务执行真实推理 |
+| 输入 | 页面生成时选定的案例 | 内置样例快捷填入，或上传符合约定的 ZIP |
+| 展示重点 | 多组方法及消融结果，支持六组方法对比 | S0 与完整 S4 的案例对比，配合 GT 诊断误检、漏检与边界差异 |
+| 运行依赖 | 已生成的页面可离线复制，查看时不需要 GPU | 浏览器无需 GPU；推理主机需运行 CUDA 服务 |
+| 部署方式 | 打开生成的 `index.html` | 静态网页与推理 API，可在同一台或不同机器运行 |
 
-当前预测由课程标注生成，版本和耗时均为测试值，不用于算法评测。Mock 只支持准备好的 6 组原始文件；其他合规输入可以通过校验，但无法取得预测。后端实现信息不进入页面或公共响应。
+两者使用同一算法成果，区别在交互与部署方式。已有案例的离线讲解可直接使用算法组 Demo；本仓库用于现场输入、真实推理和逐实例分析。内置样例也执行真实推理，不读取预先保存的预测。
 
-## 快速开始
+## 当前功能
 
-环境要求：Node.js 22+、Python 3.10+。课程数据需单独获取，默认目录结构：
+- 一次上传 ZIP：RGB、原始深度和可选 GT；样例可快捷填入。
+- GT／S0／S4 同步缩放、拖动和复位；无 GT 时展示两个模型预测。
+- 误差诊断、置信度过滤、IoU 匹配门槛、全部／小目标筛选及 GT 实例聚焦。
+- 单图 P–R 包络、原始曲线、当前工作点、当前 IoU 的 AP 与单图 AP／APₛ。
+- 掩码透明度调节、对比图片导出、加载和模型失败状态。
 
-```text
-workspace/
-├── blender/
-│   ├── rgb/
-│   ├── depth/
-│   └── annotations/
-└── rgbd/                 # 本仓库
+当前已接入真实推理，不包含 mock 回退。单图指标帮助解释当前案例，不能替代完整数据集的实验结论。局部聚焦只改变图片与实例表头，曲线仍统计整图或全部小目标。
+
+## 架构与边界
+
+```mermaid
+flowchart LR
+  ZIP[ZIP 数据包 / 样例] --> WEB[React 网页
+校验、预览、GT 诊断、导出]
+  WEB --> ADAPTER[HTTP Adapter]
+  ADAPTER -->|RGB + 原始深度| API[Python HTTP 服务]
+  API --> S0[算法组 S0]
+  API --> S4[算法组 S4]
+  S0 --> API
+  S4 --> API
+  API -->|实例掩码、置信度、耗时| ADAPTER
+  ADAPTER --> WEB
 ```
 
-在仓库根目录执行以下 PowerShell 命令。Python 依赖建议安装在虚拟环境中。
+前端依赖统一的 `DemoBackend.compare()` 接口。ZIP 在浏览器中解压；GT 只用于浏览器本地对照和评测，不发送到推理服务。模型加载、深度预处理和执行由服务器负责，HTTP Adapter 将 COCO 压缩 RLE 转成前端掩码。
+
+## 运行与部署
+
+完整操作见 **[部署指南](docs/deployment.md)**，包含新机器准备、当前主机启动、局域网演示、生产构建和故障排查。
+
+当前这台设备已有运行环境时，在两个 PowerShell 窗口分别执行：
 
 ```powershell
+# 窗口 1：推理服务，使用当前设备已准备的仓库外环境
+& D:\rgbd\deployment\serve.ps1
+```
+
+```powershell
+# 窗口 2：网页，在本仓库目录执行
+Set-Location D:\rgbd\rgbd
 npm ci
-python -m pip install -r scripts/requirements.txt
-python scripts/prepare_samples.py --dataset ../blender
 npm run dev -- --port 5174 --strictPort
 ```
 
-访问 [http://127.0.0.1:5174/](http://127.0.0.1:5174/)。数据位于其他位置时，修改 `--dataset` 参数。
+打开 `http://127.0.0.1:5174/`。笔记本演示时打开 `http://推理主机局域网IP:5174/`；笔记本只需要浏览器。
 
-准备脚本从验证集选取 6 组样例，生成原始图像、GT 和测试预测至 `public/demo-data/`。该目录已被 Git 忽略；首次运行及样例格式变更后需重新生成。
-
-## 输入输出
-
-### 输入规范
-
-| 数据 | 格式 |
-| --- | --- |
-| RGB | 1024×1024，8 位三通道 PNG |
-| 深度 | 1024×1024，16 位单通道 PNG，与 RGB 配准 |
-| 深度数值 | 相机 Z 轴距离；原始值 × 0.0001 = 米，0 为无效值 |
-| 文件大小 | 每个文件不超过 30 MB |
-| GT | 可选；内置样例提供，手动选文件不附带 GT |
-
-校验包括文件格式、解码、尺寸和有效深度。配对关系及配准由输入提供方保证。
-
-### 后端接口
-
-类型定义见 [`src/domain/types.ts`](src/domain/types.ts)，输入约束见 [`src/domain/inputSpec.ts`](src/domain/inputSpec.ts)。
-
-```ts
-type InferenceInput = {
-  id: string;
-  rgb: Blob;
-  depth: Blob;
-};
-
-interface DemoBackend {
-  compare(input: InferenceInput, signal?: AbortSignal): Promise<Comparison>;
-}
-```
-
-`Comparison` 返回输入 ID 和 `baseline`、`improved` 两个模型的结果。每个结果包含模型名称、版本、耗时及成功/失败状态；成功时返回实例类别、置信度和原图坐标下的二值掩码。支持空预测和单模型失败。
-
-GT 与预览保存在页面数据 `DemoItem` 中，不传入后端。更换输入会取消旧请求、清除旧结果；更换样例中的任一文件也会清除 GT。
-
-## 项目结构
+## 上传格式
 
 ```text
-src/
-├── application/     # 输入状态、请求生命周期、结果校验
-├── backend/         # 后端适配器与装配入口
-├── components/      # 输入区、结果对比组件
-├── domain/          # 共享类型与输入约束
-├── input/           # 原始数据读取、深度解码与预览
-├── providers/       # 内置样例读取与资源解码
-├── upload/          # 文件校验
-└── viewer/          # 掩码绘制、视图变换、图片导出
-scripts/             # Python 数据准备脚本
+case.zip
+├── rgb.png      必需：8 位三通道 PNG
+├── depth.png    必需：16 位单通道 PNG
+└── gt.png       可选：8 或 16 位单通道实例 ID PNG
 ```
 
-数据流：`选择文件 / 样例填入 → 输入准备 → DemoBackend.compare → 结果校验 → 对比视图`。
+所有图像均为 1024×1024，直接放在 ZIP 根目录，不包含其他文件或嵌套目录。每个文件限 30 MB，ZIP 限 90 MB。GT 的 0 表示背景，不同非零整数表示不同实例，彩色预览图不能作为 GT；当前支持单前景类别、非 crowd 标注。
 
-前端依赖 `DemoBackend` 接口。启动入口通过 [`src/backend/index.ts`](src/backend/index.ts) 的 `createBackend()` 注入实现，目前硬编码为 `MockBackendAdapter`。Mock 在逻辑上属于后端适配层，当前没有独立运行的业务服务器。
+RGB 与深度须配准，沿用课程相机标定；深度为相机 Z 轴距离，原始值乘 `0.0001` 得到米，0 为无效值。格式通过校验不代表任意实拍场景都具备同等预测效果。
 
-## 接入真实推理
+## 指标与交互
 
-1. 确认算法组提供的推理入口、两个模型的版本、RGB-D 预处理和计时范围。
-2. 在 `src/backend/` 实现 `DemoBackend`，负责传输原始文件、调用服务及转换响应。具体 HTTP 协议尚未定义。
-3. 返回与输入 ID 对应的结果，掩码恢复至 1024×1024 原图坐标；处理取消请求、服务错误和单模型失败。
-4. 修改 `createBackend()` 的实例构造，替换 Mock。输入区、对比视图和导出模块继续使用同一接口。
-5. 使用课程样例和手动上传验证掩码对齐、结果一致性及现场设备连通性。
+绿色表示达到当前 IoU 门槛的匹配预测，红色为误检，黄色虚线为漏检 GT。匹配采用置信度降序和一对一规则。
 
-模型训练与推理算法由算法组提供。真实服务失败时不回退到 Mock。
+IoU 改变匹配规则及曲线；置信度仅筛选掩码、移动工作点，不改变 AP。当前 IoU 的 AP 为 101 点插值精确率平均；单图 AP／APₛ 再对 IoU 0.50–0.95、步长 0.05 取平均。每图最多 100 个候选，小目标以原图 GT 面积 ≤1024 像素分组，并使用 COCO 面积忽略规则。后端已过滤的预测不能通过前端滑块恢复。
 
-## 开发与验证
+## 开发
 
-| 命令 | 用途 |
+```powershell
+npm run check
+npm test
+npm run build
+```
+
+| 目录 | 职责 |
 | --- | --- |
-| `npm run check` | TypeScript 检查 |
-| `npm test` | 接口、输入校验、深度精度和视图逻辑测试 |
-| `npm run build` | 类型检查与生产构建 |
-| `npm run preview` | 预览生产构建 |
-| `npm run format` | 格式化源码与配置 |
+| `src/application/` | 输入切换、请求取消、状态与结果校验 |
+| `src/backend/` | HTTP 适配器、RLE 转换 |
+| `src/components/` | 输入、对比图、控制面板、P–R 曲线 |
+| `src/evaluation/` | 单图匹配、P–R 与 AP |
+| `src/input/`、`src/upload/` | 图像准备、ZIP 与 GT 校验 |
+| `src/viewer/` | 掩码渲染、同步视图与图片导出 |
+| `server/service.py` | 常驻模型的推理 HTTP 服务 |
+| `scripts/` | 课程样例生成 |
 
-Mock 按 RGB 和原始深度的文件 SHA-256 匹配测试结果。重命名不影响匹配，重新编码会改变摘要。可使用以下文件验证手动选择与第一个样例结果一致：
-
-```text
-../blender/rgb/val/0201960_v000.png
-../blender/depth/val/0201960_v000.png
-```
-
-`MockBackendAdapter` 的 `failOnce` 构造参数用于测试失败重试。测试预测、摘要索引及失败模拟均为适配器内部实现，不属于公共接口。
-
-`dist/` 包含网页与已生成的样例，不包含模型。原始数据、生成资源、依赖和构建产物不提交到 Git。
+依赖、构建输出、生成样例、本地环境配置不提交。算法源码、权重、Python 环境及运行日志放在仓库外。当前机器上的 `deployment/serve.ps1` 是本地辅助脚本，不随本仓库分发；新机器请按部署指南配置。

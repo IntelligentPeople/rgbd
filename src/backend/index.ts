@@ -1,7 +1,8 @@
 import type { DemoBackend } from '../domain/types';
-import { MockBackendAdapter } from './mock';
-// Implementation selection belongs only to this composition root.
-// Replace the construction below with the real backend adapter when available.
+import { HttpBackendAdapter } from './http';
+
+// The browser always uses the same HTTP contract. The inference host owns the
+// choice of its internal implementation.
 export function createBackend(): DemoBackend {
-  return new MockBackendAdapter();
+  return new HttpBackendAdapter();
 }

@@ -45,4 +45,6 @@ export type RenderOptions = {
   opacity: number;
   threshold: number;
   showMasks: boolean;
+  colors?: Record<string, string>;
+  missed?: GroundTruthInstance[];
 };

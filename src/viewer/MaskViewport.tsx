@@ -7,15 +7,18 @@ export function MaskViewport({
   options,
   setView,
   label,
+  onSelect,
 }: {
   input: DemoItem;
   instances: Instance[];
   options: RenderOptions;
   setView: Dispatch<SetStateAction<ViewTransform>>;
   label: string;
+  onSelect?: (id: string) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
+  const origin = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     const canvas = ref.current!;
     const paint = () => {
@@ -52,6 +55,7 @@ export function MaskViewport({
       }}
       onPointerDown={(e) => {
         drag.current = { x: e.clientX, y: e.clientY };
+        origin.current = { x: e.clientX, y: e.clientY };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
@@ -65,11 +69,33 @@ export function MaskViewport({
           y: Math.max(-v.zoom / 2, Math.min(v.zoom / 2, v.y + dy)),
         }));
       }}
-      onPointerUp={() => {
+      onPointerUp={(e) => {
+        if (
+          onSelect &&
+          origin.current &&
+          Math.hypot(e.clientX - origin.current.x, e.clientY - origin.current.y) < 4
+        ) {
+          const box = e.currentTarget.getBoundingClientRect();
+          const u =
+            ((e.clientX - box.left) / box.width - 0.5 - options.view.x) / options.view.zoom + 0.5;
+          const v =
+            ((e.clientY - box.top) / box.height - 0.5 - options.view.y) / options.view.zoom + 0.5;
+          if (u >= 0 && v >= 0 && u < 1 && v < 1) {
+            const instance = instances.find(
+              (g) =>
+                g.mask.pixels[
+                  Math.floor(v * g.mask.height) * g.mask.width + Math.floor(u * g.mask.width)
+                ],
+            );
+            if (instance) onSelect(instance.id);
+          }
+        }
         drag.current = null;
+        origin.current = null;
       }}
       onPointerCancel={() => {
         drag.current = null;
+        origin.current = null;
       }}
     />
   );

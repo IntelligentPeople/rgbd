@@ -4,15 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "check": "tsc --noEmit",
     "format": "prettier --write src package.json tsconfig.json index.html .prettierrc.json",
     "test": "tsx --test src/**/*.test.ts",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
     "fast-png": "^8.0.0",
+    "fflate": "^0.8.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -3,14 +3,11 @@ import type {
   Comparison,
   DemoItem,
   DemoBackend,
-  InferenceInput,
   SampleRepository,
   SampleSummary,
   InputFiles,
-  InputRole,
 } from '../domain/types';
-import { prepareInput } from '../input/prepare';
-import { validateUpload } from '../upload/validate';
+import { preparePackage } from '../upload/package';
 import { validateComparison } from './comparison';
 const message = (error: unknown) => (error instanceof Error ? error.message : '操作失败，请重试。');
 export function useDemo(repository: SampleRepository, backend: DemoBackend) {
@@ -18,9 +15,6 @@ export function useDemo(repository: SampleRepository, backend: DemoBackend) {
   const [selected, setSelected] = useState('');
   const [files, setFiles] = useState<InputFiles>({});
   const filesRef = useRef<InputFiles>({});
-  const [fileErrors, setFileErrors] = useState<Partial<Record<InputRole, string>>>({});
-  const [checking, setChecking] = useState<Partial<Record<InputRole, boolean>>>({});
-  const fieldRevisions = useRef({ rgb: 0, depth: 0 });
   const [item, setItem] = useState<DemoItem>();
   const [comparison, setComparison] = useState<Comparison>();
   const [loading, setLoading] = useState(false);
@@ -66,12 +60,8 @@ export function useDemo(repository: SampleRepository, backend: DemoBackend) {
   );
   const select = useCallback(
     (id: string) => {
-      fieldRevisions.current.rgb++;
-      fieldRevisions.current.depth++;
       filesRef.current = {};
       setFiles({});
-      setFileErrors({});
-      setChecking({});
       setSelected(id);
       lastLoad.current = () => {
         void load((signal) => repository.loadSample(id, signal));
@@ -95,41 +85,14 @@ export function useDemo(repository: SampleRepository, backend: DemoBackend) {
       });
     return () => controller.abort();
   }, [repository, listRevision]);
-  const upload = (input: InferenceInput) => {
-    lastLoad.current = () => {
-      void load((signal) => prepareInput(input, signal));
-    };
-    lastLoad.current();
-  };
-  const chooseFile = async (role: InputRole, file?: File) => {
-    const revision = ++fieldRevisions.current[role];
-    clear();
+  const choosePackage = (file: File) => {
     setSelected('');
-    lastLoad.current = undefined;
-    filesRef.current = { ...filesRef.current, [role]: undefined };
-    setFiles(filesRef.current);
-    setFileErrors((current) => ({ ...current, [role]: undefined }));
-    setChecking((current) => ({ ...current, [role]: Boolean(file) }));
-    if (!file) return;
-    try {
-      await validateUpload(file, role);
-      if (revision !== fieldRevisions.current[role]) return;
-      filesRef.current = { ...filesRef.current, [role]: file };
-      setFiles(filesRef.current);
-      const { rgb, depth } = filesRef.current;
-      if (rgb && depth) upload({ id: crypto.randomUUID(), rgb, depth });
-    } catch (e) {
-      if (revision === fieldRevisions.current[role])
-        setFileErrors((current) => ({ ...current, [role]: message(e) }));
-    } finally {
-      if (revision === fieldRevisions.current[role])
-        setChecking((current) => ({ ...current, [role]: false }));
-    }
+    setFiles({});
+    lastLoad.current = () => { void load((signal) => preparePackage(file, signal)); };
+    lastLoad.current();
   };
   useEffect(
     () => () => {
-      fieldRevisions.current.rgb++;
-      fieldRevisions.current.depth++;
       loadController.current?.abort();
       runController.current?.abort();
     },
@@ -160,8 +123,6 @@ export function useDemo(repository: SampleRepository, backend: DemoBackend) {
     samples,
     selected,
     files,
-    fileErrors,
-    checking,
     item,
     comparison,
     loading,
@@ -169,7 +130,7 @@ export function useDemo(repository: SampleRepository, backend: DemoBackend) {
     error,
     listError,
     select,
-    chooseFile,
+    choosePackage,
     run,
     retryList: () => refreshList((v) => v + 1),
     retryInput: () => lastLoad.current?.(),

@@ -1,12 +1,13 @@
 :root {
-  font-family: 'Microsoft YaHei UI', 'PingFang SC', 'Segoe UI', sans-serif;
-  color: #263442;
-  background: #f5f7fa;
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+  color: #20334a;
+  background: #eef2f6;
   font-synthesis: none;
   line-height: 1.6;
   --accent: #2463b3;
   --line: #dce3eb;
   --muted: #68798a;
+  --ink: #20334a;
 }
 * {
   box-sizing: border-box;
@@ -41,7 +42,7 @@ a {
   text-decoration: none;
 }
 .topbar {
-  height: 64px;
+  height: 58px;
   padding: 0 32px;
   background: #fff;
   border-bottom: 1px solid var(--line);
@@ -235,60 +236,6 @@ h2 {
   padding-top: 20px;
   border-top: 1px solid var(--line);
 }
-.viewer-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 22px;
-  padding: 12px 16px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: 6px 6px 0 0;
-  font-size: 12px;
-}
-.viewer-toolbar label {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  white-space: nowrap;
-}
-.viewer-toolbar input {
-  accent-color: var(--accent);
-}
-.viewer-toolbar input[type='range'] {
-  width: 95px;
-  height: 12px;
-}
-.viewer-toolbar b {
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  min-width: 32px;
-}
-.check {
-  cursor: pointer;
-}
-.zoom-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-.zoom-controls button {
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #f7f9fc;
-  min-width: 28px;
-  height: 26px;
-  padding: 0 7px;
-  font-size: 12px;
-}
-.zoom-controls span {
-  min-width: 35px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
 .comparison-grid {
   display: grid;
   gap: 1px;
@@ -396,7 +343,7 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 25px;
+  padding: 18px 20px;
   background: #fff;
   border: 1px dashed #b9c9dc;
   border-radius: 6px;
@@ -447,9 +394,6 @@ h2 {
   .sample small {
     font-size: 10px;
   }
-  .viewer-toolbar {
-    gap: 15px;
-  }
 }
 @media (max-width: 800px) {
   .topbar {
@@ -463,12 +407,6 @@ h2 {
   }
   .thumbnail {
     aspect-ratio: 2.3;
-  }
-  .viewer-toolbar {
-    gap: 12px;
-  }
-  .viewer-toolbar input[type='range'] {
-    width: 75px;
   }
   .zoom-controls {
     margin-left: 0;

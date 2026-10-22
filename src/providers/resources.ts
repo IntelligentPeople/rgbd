@@ -1,5 +1,5 @@
-import type { Instance, Mask, GroundTruthInstance, PredictionInstance } from '../domain/types';
-export type FixtureInstance = { id: string; categoryId: number; score?: number; maskUrl: string };
+import type { Instance, Mask, GroundTruthInstance } from '../domain/types';
+export type FixtureInstance = { id: string; categoryId: number; maskUrl: string };
 export async function readJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal });
   if (!response.ok) throw new Error('样例资源未就绪，请先按 README 生成 demo-data。');
@@ -62,7 +62,7 @@ export async function decodeInstances(
             categoryId: item.categoryId,
             mask: await decodeMask(item.maskUrl, signal),
           };
-          return item.score === undefined ? base : { ...base, score: item.score };
+          return base;
         }),
       )),
     );
@@ -73,22 +73,5 @@ export async function decodeGroundTruth(
   items: FixtureInstance[],
   signal?: AbortSignal,
 ): Promise<GroundTruthInstance[]> {
-  if (items.some((item) => item.score !== undefined)) throw new Error('GT 不能包含预测置信度。');
   return (await decodeInstances(items, signal)) as GroundTruthInstance[];
-}
-export async function decodePredictions(
-  items: FixtureInstance[],
-  signal?: AbortSignal,
-): Promise<PredictionInstance[]> {
-  if (
-    items.some(
-      (item) =>
-        typeof item.score !== 'number' ||
-        !Number.isFinite(item.score) ||
-        item.score < 0 ||
-        item.score > 1,
-    )
-  )
-    throw new Error('预测必须包含 0–1 的置信度。');
-  return (await decodeInstances(items, signal)) as PredictionInstance[];
 }
